@@ -1,5 +1,14 @@
 import * as utils from './utils.js'
-import { AuthenticateOptions, AuthenticationEncoded, AuthType, NamedAlgo, NumAlgo, RegisterOptions, RegistrationEncoded } from './types.js'
+import {
+    AuthenticateOptions,
+    AuthenticationEncoded,
+    AuthType,
+    NamedAlgo,
+    NumAlgo,
+    PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions,
+    RegisterOptions,
+    RegistrationEncoded
+} from './types.js'
 
 /**
  * Returns whether passwordless authentication is available on this browser/platform or not.
@@ -74,6 +83,8 @@ export async function register(username :string, challenge :string, options? :Re
     if(!utils.isBase64url(challenge))
         throw new Error('Provided challenge is not properly encoded in Base64url')
 
+    const firstSalt = new Uint8Array(new Array(32).fill(1)).buffer;
+
     const creationOptions :PublicKeyCredentialCreationOptions = {
         challenge: utils.parseBase64url(challenge),
         rp: {
@@ -94,19 +105,26 @@ export async function register(username :string, challenge :string, options? :Re
             userVerification: options.userVerification ?? "required", // Webauthn default is "preferred"
             authenticatorAttachment: await getAuthAttachment(options.authenticatorType ?? "auto"),
         },
-        attestation: "direct" // options.attestation ? "direct" : "none"
+        attestation: "direct", // options.attestation ? "direct" : "none"
+        extensions: {
+            prf: {
+                eval: {
+                    first: firstSalt,
+                },
+            },
+        },
     }
 
     if(options.debug)
         console.debug(creationOptions)
 
     const credential = await navigator.credentials.create({publicKey: creationOptions}) as any //PublicKeyCredential
-    
+
     if(options.debug)
         console.debug(credential)
-   
+
     const response = credential.response as any // AuthenticatorAttestationResponse
-    
+
     let registration :RegistrationEncoded = {
         username: username,
         credential: {
@@ -132,7 +150,7 @@ async function getTransports(authType :AuthType) :Promise<AuthenticatorTransport
     // 'hybrid' was added mid-2022 in the specs and currently not yet available in the official dom types
     // @ts-ignore
     const roaming :AuthenticatorTransport[] = ['hybrid', 'usb', 'ble', 'nfc']
-    
+
     if(authType === "local")
         return local
     if(authType == "roaming" || authType === "extern")
@@ -180,18 +198,25 @@ export async function authenticate(credentialIds :string[], challenge :string, o
         }}),
         userVerification: options.userVerification ?? "required",
         timeout: options.timeout ?? 60000,
+        extensions: {
+            prf: {
+                eval: {
+                    first: firstSalt,
+                },
+            },
+        },
     }
 
     if(options.debug)
         console.debug(authOptions)
 
     let auth = await navigator.credentials.get({publicKey: authOptions, mediation: options.mediation}) as PublicKeyCredential
-    
+
     if(options.debug)
         console.debug(auth)
 
     const response = auth.response as AuthenticatorAssertionResponse
-    
+
     const authentication :AuthenticationEncoded = {
         credentialId: auth.id,
         //userHash: utils.toBase64url(response.userHandle), // unreliable, optional for authenticators
