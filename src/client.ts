@@ -212,6 +212,8 @@ export async function authenticate(credentialIds :string[], challenge :string, o
 
     let auth = await navigator.credentials.get({publicKey: authOptions, mediation: options.mediation}) as PublicKeyCredential
 
+    console.log(utils.toBase64url(auth.getClientExtensionResults().prf.results.first));
+
     if(options.debug)
         console.debug(auth)
 
