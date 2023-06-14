@@ -1,5 +1,5 @@
 {
-  "name": "@passwordless-id/webauthn",
+  "name": "webauthn-prf",
   "version": "1.2.5",
   "description": "A small wrapper around the webauthn protocol to make one's life easier.",
   "type": "module",

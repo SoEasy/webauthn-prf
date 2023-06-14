@@ -10,6 +10,8 @@ import {
     RegistrationEncoded
 } from './types.js'
 
+const firstSalt = new Uint8Array(new Array(32).fill(1)).buffer;
+
 /**
  * Returns whether passwordless authentication is available on this browser/platform or not.
  */
@@ -82,8 +84,6 @@ export async function register(username :string, challenge :string, options? :Re
 
     if(!utils.isBase64url(challenge))
         throw new Error('Provided challenge is not properly encoded in Base64url')
-
-    const firstSalt = new Uint8Array(new Array(32).fill(1)).buffer;
 
     const creationOptions :PublicKeyCredentialCreationOptions = {
         challenge: utils.parseBase64url(challenge),
